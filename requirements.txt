@@ -1,0 +1,16 @@
+# Friendly Backend — Python Dependencies
+# Pin major versions for pilot stability. No premature optimization.
+
+fastapi==0.115.*
+uvicorn[standard]==0.34.*
+pydantic==2.10.*
+pydantic-settings==2.7.*
+
+# Supabase
+supabase==2.13.*
+
+# JWT verification
+PyJWT==2.10.*
+
+# HTTP client (required by supabase-py)
+httpx==0.28.*
