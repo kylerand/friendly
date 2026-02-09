@@ -25,8 +25,8 @@ logger = logging.getLogger("friendly.auth")
 
 
 def get_current_user_id(
+    request: Request,
     credentials: HTTPAuthorizationCredentials = Depends(security),
-    request: Request = Depends(),
     settings: Settings = Depends(get_settings),
 ) -> str:
     """
