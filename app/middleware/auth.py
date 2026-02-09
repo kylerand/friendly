@@ -82,6 +82,14 @@ def get_current_user_id(
     verification_algorithms = [alg] if alg else ["HS256"]
 
     if alg.startswith("HS"):
+        if not settings.supabase_jwt_secret:
+            logger.error(
+                "HS-signed token received but SUPABASE_JWT_SECRET is not configured"
+            )
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Server misconfiguration: SUPABASE_JWT_SECRET required for HS-signed tokens",
+            )
         verification_key = settings.supabase_jwt_secret
     else:
         # Fetch JWKS from Supabase and resolve the signing key.

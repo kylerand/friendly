@@ -29,8 +29,10 @@ class Settings(BaseSettings):
 
     # -- Supabase JWT verification --
     # The JWT secret from Supabase → Settings → API → JWT Secret.
-    # Used to verify access tokens on the backend without calling Supabase.
-    supabase_jwt_secret: str
+    # Used to verify HS*-signed access tokens locally. If your project
+    # uses asymmetric tokens (ES*/RS*), you can leave this blank and the
+    # backend will verify via the Supabase JWKS endpoint.
+    supabase_jwt_secret: str | None = None
 
     # -- App --
     environment: str = "development"  # "development" | "pilot" | "production"
