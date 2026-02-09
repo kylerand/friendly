@@ -124,8 +124,13 @@ def get_current_user_id(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Token has expired",
         )
-    except jwt.InvalidTokenError:
-        logger.warning("Invalid token for request %s token=%s", request.url.path, masked)
+    except jwt.InvalidTokenError as exc:
+        logger.warning(
+            "Invalid token for request %s token=%s error=%s",
+            request.url.path,
+            masked,
+            str(exc),
+        )
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid authentication token",

@@ -12,5 +12,8 @@ supabase==2.13.*
 # JWT verification
 PyJWT==2.10.*
 
+# Required for ECDSA/RS256 key support used by Supabase JWKS
+cryptography==41.*
+
 # HTTP client (required by supabase-py)
 httpx==0.28.*
