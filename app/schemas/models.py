@@ -24,13 +24,25 @@ class ProfileResponse(BaseModel):
     id: UUID
     display_name: str
     avatar_url: Optional[str] = None
+    phone_number: Optional[str] = None
+    email: Optional[str] = None
     metadata: Dict[str, str] = Field(default_factory=dict)
+    created_at: datetime
+
+
+class ProfilePublicResponse(BaseModel):
+    """Returned by search — no contact info exposed."""
+    id: UUID
+    display_name: str
+    avatar_url: Optional[str] = None
     created_at: datetime
 
 
 class ProfileUpdate(BaseModel):
     display_name: Optional[str] = None
     avatar_url: Optional[str] = None
+    phone_number: Optional[str] = None
+    email: Optional[str] = None
     metadata: Optional[Dict[str, str]] = None
 
 
