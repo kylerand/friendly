@@ -13,17 +13,20 @@ Flow:
 If the token is missing, expired, or invalid → 401 Unauthorized.
 """
 
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 import jwt
+import logging
 
 from app.config import Settings, get_settings
 
-security = HTTPBearer()
+security = HTTPBearer(auto_error=False)
+logger = logging.getLogger("friendly.auth")
 
 
 def get_current_user_id(
     credentials: HTTPAuthorizationCredentials = Depends(security),
+    request: Request = Depends(),
     settings: Settings = Depends(get_settings),
 ) -> str:
     """
@@ -32,7 +35,36 @@ def get_current_user_id(
     Supabase JWTs use HS256 with the project's JWT secret.
     The `sub` claim contains the user's UUID from auth.users.
     """
+    # If credentials were not provided the HTTPBearer dependency will
+    # return None (we set auto_error=False). Log request info for
+    # debugging and return a 403 to match previous behaviour.
+    if not credentials:
+        auth_header = request.headers.get("authorization")
+        ua = request.headers.get("user-agent")
+        client_ip = None
+        try:
+            client_ip = request.client.host
+        except Exception:
+            client_ip = "unknown"
+        logger.warning(
+            "Missing credentials for request %s from %s UA=%s auth_header=%s",
+            request.url.path,
+            client_ip,
+            ua,
+            (auth_header[:32] + "...") if auth_header else None,
+        )
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not authenticated",
+        )
+
     token = credentials.credentials
+    masked = (token[:12] + "...") if token else None
+    logger.debug("Decoding token for request %s from %s — token=%s",
+                 request.url.path,
+                 getattr(request.client, "host", "unknown"),
+                 masked)
+
     try:
         payload = jwt.decode(
             token,
@@ -41,11 +73,13 @@ def get_current_user_id(
             audience="authenticated",
         )
     except jwt.ExpiredSignatureError:
+        logger.info("Expired token for request %s token=%s", request.url.path, masked)
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Token has expired",
         )
     except jwt.InvalidTokenError:
+        logger.warning("Invalid token for request %s token=%s", request.url.path, masked)
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid authentication token",

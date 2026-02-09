@@ -9,6 +9,7 @@ FastAPI app with:
 """
 
 from fastapi import FastAPI
+import logging
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import get_settings
@@ -22,6 +23,10 @@ app = FastAPI(
     docs_url="/docs" if not settings.is_pilot else None,   # disable Swagger in pilot
     redoc_url=None,
 )
+
+# Enable debug logging for authentication middleware
+logging.basicConfig(level=logging.INFO)
+logging.getLogger("friendly.auth").setLevel(logging.DEBUG)
 
 # -- CORS --
 app.add_middleware(
