@@ -32,6 +32,12 @@ def add_friendship(
     if str(body.friend_id) == user_id:
         raise HTTPException(status_code=400, detail="Cannot friend yourself")
 
+    # Prevent duplicate directional friendships: check if a row already exists
+    existing = [f for f in repo.list_friendships(user_id) if f.get('user_id') == user_id and f.get('friend_id') == str(body.friend_id)]
+    if existing:
+        # Return a controlled 409 Conflict with a helpful message
+        raise HTTPException(status_code=409, detail="Friendship already exists")
+
     friendship = repo.create_friendship(user_id, str(body.friend_id))
     return friendship
 
