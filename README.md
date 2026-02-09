@@ -94,6 +94,16 @@ railway up
 
 See `railway.toml` for deployment config. The Dockerfile builds a slim Python 3.12 image. Health check at `/health` is configured for Railway's monitoring.
 
+### Supabase key changes
+
+Supabase has updated their key layout and best practices (see the discussion below). For this project:
+
+- Use the project's `anon` key for client-side operations.
+- Keep the `service_role` key server-only and rotate it if accidentally exposed.
+- Use the project's JWT secret (Settings → API → JWT Secret) for HMAC verification, or rely on the project's JWKS (via `/auth/v1/.well-known/jwks.json`) for asymmetric tokens.
+
+Reference: https://github.com/supabase/discussions/29260
+
 ## Data Model
 
 All tables live in Supabase Postgres with RLS policies. See `supabase/migrations/001_initial_schema.sql`.

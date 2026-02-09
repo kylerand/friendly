@@ -17,8 +17,12 @@ from pydantic_settings import BaseSettings
 class Settings(BaseSettings):
     # -- Supabase --
     supabase_url: str
-    supabase_anon_key: str
-    supabase_service_role_key: str
+    # Classic names
+    supabase_anon_key: str | None = None
+    supabase_service_role_key: str | None = None
+    # New 2024+ naming (publishable vs secret)
+    supabase_publishable_key: str | None = None
+    supabase_secret_key: str | None = None
 
     # -- Supabase Postgres (direct connection via connection pooler) --
     database_url: str
@@ -50,4 +54,12 @@ class Settings(BaseSettings):
 
 @lru_cache
 def get_settings() -> Settings:
-    return Settings()  # type: ignore[call-arg]
+    s = Settings()  # type: ignore[call-arg]
+
+    # Backwards-compatible mapping: prefer new names when present
+    if not s.supabase_anon_key and s.supabase_publishable_key:
+        s.supabase_anon_key = s.supabase_publishable_key
+    if not s.supabase_service_role_key and s.supabase_secret_key:
+        s.supabase_service_role_key = s.supabase_secret_key
+
+    return s

@@ -64,12 +64,50 @@ def get_current_user_id(
                  request.url.path,
                  getattr(request.client, "host", "unknown"),
                  masked)
+    # Determine token algorithm from the header and verify accordingly.
+    try:
+        unverified_header = jwt.get_unverified_header(token)
+        alg = unverified_header.get("alg", "")
+    except jwt.InvalidTokenError:
+        logger.warning("Invalid token header for request %s token=%s", request.url.path, masked)
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid authentication token",
+        )
+
+    # Use shared secret for HMAC-signed tokens (HS*). For asymmetric tokens
+    # (ES*, RS*) fetch the JWKS from the Supabase project's well-known URL
+    # and use the corresponding public key for verification.
+    verification_key = None
+    verification_algorithms = [alg] if alg else ["HS256"]
+
+    if alg.startswith("HS"):
+        verification_key = settings.supabase_jwt_secret
+    else:
+        # Fetch JWKS from Supabase and resolve the signing key.
+        # Supabase exposes JWKS under the auth v1 path
+        jwks_url = settings.supabase_url.rstrip("/") + "/auth/v1/.well-known/jwks.json"
+        try:
+            jwk_client = jwt.PyJWKClient(jwks_url)
+            signing_key = jwk_client.get_signing_key_from_jwt(token)
+            verification_key = signing_key.key
+        except Exception as exc:  # network error or kid not found
+            logger.warning(
+                "Failed to resolve JWKS key for request %s token=%s error=%s",
+                request.url.path,
+                masked,
+                str(exc),
+            )
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid authentication token",
+            )
 
     try:
         payload = jwt.decode(
             token,
-            settings.supabase_jwt_secret,
-            algorithms=["HS256"],
+            verification_key,
+            algorithms=verification_algorithms,
             audience="authenticated",
         )
     except jwt.ExpiredSignatureError:
