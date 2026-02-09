@@ -27,5 +27,5 @@ ENV PORT=8000
 HEALTHCHECK --interval=30s --timeout=5s --retries=3 \
   CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:${PORT}/health')"
 
-# Run with uvicorn — Railway passes PORT via env
-CMD uvicorn app.main:app --host 0.0.0.0 --port ${PORT}
+# Run with uvicorn — Railway injects PORT env var
+CMD ["sh", "-c", "uvicorn app.main:app --host 0.0.0.0 --port $PORT"]
