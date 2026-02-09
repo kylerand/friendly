@@ -47,6 +47,19 @@ class Repository:
         )
         return result.data[0] if result.data else payload
 
+    def search_profiles(self, query: str, exclude_id: str | None = None, limit: int = 20) -> list[dict[str, Any]]:
+        """Search profiles by display_name (case-insensitive partial match)."""
+        builder = (
+            self._client.table("profiles")
+            .select("id, display_name, avatar_url, created_at")
+            .ilike("display_name", f"%{query}%")
+            .limit(limit)
+        )
+        if exclude_id:
+            builder = builder.neq("id", exclude_id)
+        result = builder.execute()
+        return result.data or []
+
     # -- Friendships --
 
     def create_friendship(self, user_id: str, friend_id: str) -> dict[str, Any]:

@@ -12,7 +12,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import get_settings
-from app.routers import ambient, auth, check_ins, friendships, interactions
+from app.routers import ambient, auth, check_ins, friendships, interactions, profiles
 
 settings = get_settings()
 
@@ -34,6 +34,7 @@ app.add_middleware(
 
 # -- Routers --
 app.include_router(auth.router)
+app.include_router(profiles.router)
 app.include_router(friendships.router)
 app.include_router(interactions.router)
 app.include_router(ambient.router)
