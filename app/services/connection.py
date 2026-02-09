@@ -1,18 +1,19 @@
 from statistics import mean
 from typing import Iterable, List
 
-from app.schemas.models import Interaction
+from app.schemas.models import InteractionResponse
 
 
-def _interaction_deltas(interactions: Iterable[Interaction]) -> List[float]:
-    sorted_interactions = sorted(interactions, key=lambda i: i.timestamp)
+def _interaction_deltas(interactions: Iterable[InteractionResponse]) -> List[float]:
+    # InteractionResponse uses `created_at` for timestamps
+    sorted_interactions = sorted(interactions, key=lambda i: i.created_at)
     return [
-        (sorted_interactions[i].timestamp - sorted_interactions[i - 1].timestamp).total_seconds()
+        (sorted_interactions[i].created_at - sorted_interactions[i - 1].created_at).total_seconds()
         for i in range(1, len(sorted_interactions))
     ]
 
 
-def connection_drift(interactions: Iterable[Interaction]) -> float:
+def connection_drift(interactions: Iterable[InteractionResponse]) -> float:
     deltas = _interaction_deltas(interactions)
     if not deltas:
         return 0.0
@@ -22,14 +23,14 @@ def connection_drift(interactions: Iterable[Interaction]) -> float:
     return max(0.0, min(1.0, sum(recent) / (window * 60 * 60 * 24)))
 
 
-def average_interaction_rate(interactions: Iterable[Interaction]) -> float:
+def average_interaction_rate(interactions: Iterable[InteractionResponse]) -> float:
     deltas = _interaction_deltas(interactions)
     if not deltas:
         return 0.0
     return mean(deltas)
 
 
-def eligible_for_nudge(interactions: Iterable[Interaction]) -> bool:
+def eligible_for_nudge(interactions: Iterable[InteractionResponse]) -> bool:
     drift = connection_drift(interactions)
     rate = average_interaction_rate(interactions)
     # TODO: add logging for eligibility decision and review drift thresholds quarterly
