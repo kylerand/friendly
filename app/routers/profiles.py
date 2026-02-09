@@ -7,7 +7,7 @@ All operations require authentication via JWT.
 
 from typing import List
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 
 from app.db.repository import Repository
 from app.dependencies import get_current_user_id, get_repository
@@ -29,3 +29,19 @@ def search_profiles(
     """
     results = repo.search_profiles(query=q, exclude_id=user_id, limit=20)
     return results
+
+
+@router.get("/{profile_id}", response_model=ProfileResponse)
+def get_profile_by_id(
+    profile_id: str,
+    user_id: str = Depends(get_current_user_id),
+    repo: Repository = Depends(get_repository),
+):
+    """
+    Fetch a single profile by user ID.
+    Requires authentication (any logged-in user can view profiles).
+    """
+    profile = repo.get_profile(profile_id)
+    if not profile:
+        raise HTTPException(status_code=404, detail="Profile not found")
+    return profile
