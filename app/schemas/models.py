@@ -145,3 +145,50 @@ class HealthResponse(BaseModel):
     environment: str
     database: str
 
+
+# --------------------------------------------------------------------------
+# Admin
+# --------------------------------------------------------------------------
+
+class AdminMeResponse(BaseModel):
+    user_id: UUID
+    role: str
+
+
+class AdminProfileResponse(BaseModel):
+    id: UUID
+    display_name: str
+    avatar_url: Optional[str] = None
+    phone_number: Optional[str] = None
+    email: Optional[str] = None
+    created_at: datetime
+
+
+class AdminUserResponse(BaseModel):
+    user_id: UUID
+    role: str
+    created_at: datetime
+    profile: Optional[AdminProfileResponse] = None
+
+
+class AdminUserCreate(BaseModel):
+    user_id: UUID
+    role: str = "admin"
+
+
+class AdminFriendshipResponse(BaseModel):
+    id: UUID
+    user_id: UUID
+    friend_id: UUID
+    status: FriendshipStatus
+    created_at: datetime
+    updated_at: datetime
+
+
+class AdminMetricsResponse(BaseModel):
+    users: int
+    friendships: int
+    check_ins: int
+    interactions: int
+    ambient_signals: int
+    device_state: int

@@ -53,6 +53,13 @@ All routes (except `/health`) require `Authorization: Bearer <supabase-jwt>`.
 | `GET` | `/interactions` | List interactions |
 | `POST` | `/ambient/signals` | Record an ambient signal |
 | `GET` | `/ambient/signals` | List ambient signals |
+| `GET` | `/admin/me` | Verify admin access |
+| `GET` | `/admin/metrics` | Admin counts for core tables |
+| `GET` | `/admin/users` | List user profiles |
+| `GET` | `/admin/friendships` | List friendship connections |
+| `GET` | `/admin/admins` | List admin users |
+| `POST` | `/admin/admins` | Grant admin access |
+| `DELETE` | `/admin/admins/{user_id}` | Revoke admin access |
 
 ## Architecture
 
@@ -68,6 +75,7 @@ app/
     auth.py          ← JWT verification → user UUID
   routers/
     auth.py          ← Profile endpoints
+    admin.py         ← Admin portal endpoints
     friendships.py   ← Friendship CRUD + drift/nudge computation
     interactions.py  ← Interaction logging
     ambient.py       ← Ambient signal endpoints
@@ -114,6 +122,7 @@ All tables live in Supabase Postgres with RLS policies. See `supabase/migrations
 - **interactions** — logged contact events
 - **ambient_signals** — passive context data
 - **device_state** — future device context
+- **admin_users** — admin portal access
 
 ## Ethical Notes
 

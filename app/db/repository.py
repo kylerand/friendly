@@ -192,3 +192,63 @@ class Repository:
             return True
         except Exception:
             return False
+
+    # -- Admin access --
+
+    def get_admin_user(self, user_id: str) -> dict[str, Any] | None:
+        result = (
+            self._client.table("admin_users")
+            .select("user_id, role, created_at")
+            .eq("user_id", user_id)
+            .maybe_single()
+            .execute()
+        )
+        return result.data
+
+    def list_admin_users(self) -> list[dict[str, Any]]:
+        result = (
+            self._client.table("admin_users")
+            .select("user_id, role, created_at, profiles(id, display_name, avatar_url, phone_number, email, created_at)")
+            .order("created_at", desc=True)
+            .execute()
+        )
+        return result.data or []
+
+    def upsert_admin_user(self, user_id: str, role: str) -> dict[str, Any]:
+        result = (
+            self._client.table("admin_users")
+            .upsert({"user_id": user_id, "role": role}, on_conflict="user_id")
+            .execute()
+        )
+        return result.data[0] if result.data else {"user_id": user_id, "role": role}
+
+    def delete_admin_user(self, user_id: str) -> None:
+        self._client.table("admin_users").delete().eq("user_id", user_id).execute()
+
+    def list_profiles_admin(self, query: str | None = None, limit: int = 50) -> list[dict[str, Any]]:
+        builder = (
+            self._client.table("profiles")
+            .select("id, display_name, avatar_url, phone_number, email, created_at")
+            .order("created_at", desc=True)
+            .limit(limit)
+        )
+        if query:
+            builder = builder.ilike("display_name", f"%{query}%")
+        result = builder.execute()
+        return result.data or []
+
+    def list_friendships_admin(self, user_id: str | None = None, limit: int = 100) -> list[dict[str, Any]]:
+        builder = (
+            self._client.table("friendships")
+            .select("id, user_id, friend_id, status, created_at, updated_at")
+            .order("created_at", desc=True)
+            .limit(limit)
+        )
+        if user_id:
+            builder = builder.or_(f"user_id.eq.{user_id},friend_id.eq.{user_id}")
+        result = builder.execute()
+        return result.data or []
+
+    def count_table(self, table: str) -> int:
+        result = self._client.table(table).select("id", count="exact").limit(1).execute()
+        return int(result.count or 0)
