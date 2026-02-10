@@ -147,6 +147,23 @@ class HealthResponse(BaseModel):
 
 
 # --------------------------------------------------------------------------
+# Friend Notes (private CRM-style notes)
+# --------------------------------------------------------------------------
+
+class FriendNoteUpsert(BaseModel):
+    content: str = ""
+
+
+class FriendNoteResponse(BaseModel):
+    id: UUID
+    user_id: UUID
+    friend_id: UUID
+    content: str
+    created_at: datetime
+    updated_at: datetime
+
+
+# --------------------------------------------------------------------------
 # Admin
 # --------------------------------------------------------------------------
 

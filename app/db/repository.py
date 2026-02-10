@@ -339,3 +339,35 @@ class Repository:
             .execute()
         )
         return result.data[0] if result.data else {}
+
+    # -- Friend Notes --
+
+    def get_friend_note(self, user_id: str, friend_id: str) -> dict[str, Any] | None:
+        result = (
+            self._client.table("friend_notes")
+            .select("*")
+            .eq("user_id", user_id)
+            .eq("friend_id", friend_id)
+            .maybe_single()
+            .execute()
+        )
+        return result.data
+
+    def upsert_friend_note(self, user_id: str, friend_id: str, content: str) -> dict[str, Any]:
+        payload = {
+            "user_id": user_id,
+            "friend_id": friend_id,
+            "content": content,
+        }
+        result = (
+            self._client.table("friend_notes")
+            .upsert(payload, on_conflict="user_id,friend_id")
+            .execute()
+        )
+        return result.data[0] if result.data else payload
+
+    def delete_friend_note(self, user_id: str, friend_id: str) -> bool:
+        self._client.table("friend_notes").delete().eq(
+            "user_id", user_id
+        ).eq("friend_id", friend_id).execute()
+        return True
