@@ -15,6 +15,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.config import get_settings
 from app.routers import admin, ambient, auth, check_ins, friendships, interactions, profiles
 from app.routers.debug_token import router as debug_router
+from app.routers import nudges
 
 settings = get_settings()
 
@@ -46,6 +47,7 @@ app.include_router(friendships.router)
 app.include_router(interactions.router)
 app.include_router(ambient.router)
 app.include_router(check_ins.router)
+app.include_router(nudges.router)
 app.include_router(debug_router)
 
 
