@@ -192,3 +192,40 @@ class AdminMetricsResponse(BaseModel):
     interactions: int
     ambient_signals: int
     device_state: int
+
+
+class PortalMeResponse(BaseModel):
+    user_id: UUID
+    role: str
+    is_admin: bool
+
+
+class TesterReportCreate(BaseModel):
+    type: str
+    title: str
+    description: str
+    severity: str = "medium"
+    screenshots: List[str] = Field(default_factory=list)
+    device: Optional[str] = None
+    app_version: Optional[str] = None
+    contact: Optional[str] = None
+
+
+class TesterReportResponse(BaseModel):
+    id: UUID
+    user_id: UUID
+    type: str
+    title: str
+    description: str
+    severity: str
+    screenshots: List[str] = Field(default_factory=list)
+    device: Optional[str] = None
+    app_version: Optional[str] = None
+    contact: Optional[str] = None
+    status: str
+    created_at: datetime
+    updated_at: datetime
+
+
+class TesterReportStatusUpdate(BaseModel):
+    status: str

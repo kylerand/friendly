@@ -183,6 +183,44 @@ class Repository:
         )
         return result.data or []
 
+    def update_ambient_signal(self, signal_id: str, **kwargs: Any) -> dict[str, Any]:
+        """Update fields on an ambient signal (e.g. value for beacon deactivation)."""
+        result = (
+            self._client.table("ambient_signals")
+            .update(kwargs)
+            .eq("id", signal_id)
+            .execute()
+        )
+        return result.data[0] if result.data else {}
+
+    def list_received_care_signals(self, user_id: str, days: int = 7) -> list[dict[str, Any]]:
+        """
+        List care signals where this user is the recipient (target_id).
+
+        Returns interactions of type 'care_signal' directed at the user
+        within the given number of days. Includes sender profile info.
+        """
+        from datetime import datetime, timedelta, timezone
+
+        cutoff = (datetime.now(timezone.utc) - timedelta(days=days)).isoformat()
+        result = (
+            self._client.table("interactions")
+            .select("id, user_id, target_id, type, metadata, created_at")
+            .eq("target_id", user_id)
+            .eq("type", "care_signal")
+            .gte("created_at", cutoff)
+            .order("created_at", desc=True)
+            .execute()
+        )
+        signals = result.data or []
+
+        # Resolve sender names
+        for s in signals:
+            sender = self.get_profile(s["user_id"])
+            s["sender_name"] = sender.get("display_name", "Someone") if sender else "Someone"
+
+        return signals
+
     # -- Health --
 
     def health_check(self) -> bool:
@@ -252,3 +290,52 @@ class Repository:
     def count_table(self, table: str) -> int:
         result = self._client.table(table).select("id", count="exact").limit(1).execute()
         return int(result.count or 0)
+
+    # -- Tester feedback --
+
+    def get_user_role(self, user_id: str) -> dict[str, Any] | None:
+        result = (
+            self._client.table("user_roles")
+            .select("user_id, role, created_at")
+            .eq("user_id", user_id)
+            .maybe_single()
+            .execute()
+        )
+        return result.data
+
+    def create_tester_report(self, payload: dict[str, Any]) -> dict[str, Any]:
+        result = self._client.table("tester_reports").insert(payload).execute()
+        return result.data[0] if result.data else payload
+
+    def list_tester_reports(
+        self,
+        user_id: str | None = None,
+        status: str | None = None,
+        report_type: str | None = None,
+        limit: int = 100,
+    ) -> list[dict[str, Any]]:
+        builder = (
+            self._client.table("tester_reports")
+            .select(
+                "id, user_id, type, title, description, severity, screenshots, device, app_version, contact, status, created_at, updated_at"
+            )
+            .order("created_at", desc=True)
+            .limit(limit)
+        )
+        if user_id:
+            builder = builder.eq("user_id", user_id)
+        if status:
+            builder = builder.eq("status", status)
+        if report_type:
+            builder = builder.eq("type", report_type)
+        result = builder.execute()
+        return result.data or []
+
+    def update_tester_report_status(self, report_id: str, status: str) -> dict[str, Any]:
+        result = (
+            self._client.table("tester_reports")
+            .update({"status": status})
+            .eq("id", report_id)
+            .execute()
+        )
+        return result.data[0] if result.data else {}

@@ -13,9 +13,10 @@ import logging
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import get_settings
-from app.routers import admin, ambient, auth, check_ins, friendships, interactions, profiles
+from app.routers import admin, ambient, auth, check_ins, friendships, interactions, profiles, tester
 from app.routers.debug_token import router as debug_router
 from app.routers import nudges
+from app.routers import signals
 
 settings = get_settings()
 
@@ -42,12 +43,14 @@ app.add_middleware(
 # -- Routers --
 app.include_router(auth.router)
 app.include_router(admin.router)
+app.include_router(tester.router)
 app.include_router(profiles.router)
 app.include_router(friendships.router)
 app.include_router(interactions.router)
 app.include_router(ambient.router)
 app.include_router(check_ins.router)
 app.include_router(nudges.router)
+app.include_router(signals.router)
 app.include_router(debug_router)
 
 

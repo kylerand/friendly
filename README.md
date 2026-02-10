@@ -60,6 +60,10 @@ All routes (except `/health`) require `Authorization: Bearer <supabase-jwt>`.
 | `GET` | `/admin/admins` | List admin users |
 | `POST` | `/admin/admins` | Grant admin access |
 | `DELETE` | `/admin/admins/{user_id}` | Revoke admin access |
+| `GET` | `/tester/me` | Verify portal access (admin or pilot/tester) |
+| `POST` | `/tester/reports` | Submit tester feedback |
+| `GET` | `/tester/reports` | List tester reports (admin sees all) |
+| `PATCH` | `/tester/reports/{id}/status` | Update tester report status (admin only) |
 
 ## Architecture
 
@@ -123,6 +127,8 @@ All tables live in Supabase Postgres with RLS policies. See `supabase/migrations
 - **ambient_signals** — passive context data
 - **device_state** — future device context
 - **admin_users** — admin portal access
+- **user_roles** — pilot/tester access
+- **tester_reports** — pilot feedback submissions
 
 ## Ethical Notes
 
