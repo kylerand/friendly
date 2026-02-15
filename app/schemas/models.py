@@ -164,6 +164,31 @@ class FriendNoteResponse(BaseModel):
 
 
 # --------------------------------------------------------------------------
+# Friend Reminders
+# --------------------------------------------------------------------------
+
+class FriendReminderCreate(BaseModel):
+    friend_id: UUID
+    text: str
+    interval_days: int = Field(default=3, ge=1, le=30)
+
+
+class FriendReminderUpdate(BaseModel):
+    text: Optional[str] = None
+    interval_days: Optional[int] = Field(default=None, ge=1, le=30)
+
+
+class FriendReminderResponse(BaseModel):
+    id: UUID
+    user_id: UUID
+    friend_id: UUID
+    text: str
+    interval_days: int
+    created_at: datetime
+    updated_at: datetime
+
+
+# --------------------------------------------------------------------------
 # Admin
 # --------------------------------------------------------------------------
 

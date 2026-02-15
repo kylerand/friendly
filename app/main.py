@@ -18,6 +18,7 @@ from app.routers.debug_token import router as debug_router
 from app.routers import nudges
 from app.routers import signals
 from app.routers import friend_notes
+from app.routers import friend_reminders
 
 settings = get_settings()
 
@@ -53,6 +54,7 @@ app.include_router(check_ins.router)
 app.include_router(nudges.router)
 app.include_router(signals.router)
 app.include_router(friend_notes.router)
+app.include_router(friend_reminders.router)
 app.include_router(debug_router)
 
 

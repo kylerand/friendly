@@ -371,3 +371,59 @@ class Repository:
             "user_id", user_id
         ).eq("friend_id", friend_id).execute()
         return True
+
+    # -- Friend Reminders --------------------------------------------------
+
+    def get_friend_reminder(self, user_id: str, friend_id: str) -> dict[str, Any] | None:
+        result = (
+            self._client.table("friend_reminders")
+            .select("*")
+            .eq("user_id", user_id)
+            .eq("friend_id", friend_id)
+            .maybe_single()
+            .execute()
+        )
+        return result.data
+
+    def list_friend_reminders(self, user_id: str) -> list[dict[str, Any]]:
+        result = (
+            self._client.table("friend_reminders")
+            .select("*")
+            .eq("user_id", user_id)
+            .execute()
+        )
+        return result.data or []
+
+    def upsert_friend_reminder(
+        self, user_id: str, friend_id: str, text: str, interval_days: int
+    ) -> dict[str, Any]:
+        payload = {
+            "user_id": user_id,
+            "friend_id": friend_id,
+            "text": text,
+            "interval_days": interval_days,
+        }
+        result = (
+            self._client.table("friend_reminders")
+            .upsert(payload, on_conflict="user_id,friend_id")
+            .execute()
+        )
+        return result.data[0] if result.data else payload
+
+    def update_friend_reminder(
+        self, user_id: str, friend_id: str, updates: dict[str, Any]
+    ) -> dict[str, Any] | None:
+        result = (
+            self._client.table("friend_reminders")
+            .update(updates)
+            .eq("user_id", user_id)
+            .eq("friend_id", friend_id)
+            .execute()
+        )
+        return result.data[0] if result.data else None
+
+    def delete_friend_reminder(self, user_id: str, friend_id: str) -> bool:
+        self._client.table("friend_reminders").delete().eq(
+            "user_id", user_id
+        ).eq("friend_id", friend_id).execute()
+        return True
