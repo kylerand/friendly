@@ -383,7 +383,7 @@ class Repository:
             .maybe_single()
             .execute()
         )
-        return result.data
+        return result.data if result else None
 
     def list_friend_reminders(self, user_id: str) -> list[dict[str, Any]]:
         result = (
