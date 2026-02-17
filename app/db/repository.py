@@ -29,14 +29,17 @@ class Repository:
     # -- Profiles --
 
     def get_profile(self, user_id: str) -> dict[str, Any] | None:
-        result = (
-            self._client.table("profiles")
-            .select("*")
-            .eq("id", user_id)
-            .maybe_single()
-            .execute()
-        )
-        return result.data
+        try:
+            result = (
+                self._client.table("profiles")
+                .select("*")
+                .eq("id", user_id)
+                .maybe_single()
+                .execute()
+            )
+            return result.data if result else None
+        except Exception:
+            return None
 
     def upsert_profile(self, user_id: str, display_name: str, **kwargs: Any) -> dict[str, Any]:
         payload = {"id": user_id, "display_name": display_name, **kwargs}
@@ -89,14 +92,17 @@ class Repository:
         return result.data or []
 
     def get_friendship(self, friendship_id: str) -> dict[str, Any] | None:
-        result = (
-            self._client.table("friendships")
-            .select("*")
-            .eq("id", friendship_id)
-            .maybe_single()
-            .execute()
-        )
-        return result.data
+        try:
+            result = (
+                self._client.table("friendships")
+                .select("*")
+                .eq("id", friendship_id)
+                .maybe_single()
+                .execute()
+            )
+            return result.data if result else None
+        except Exception:
+            return None
 
     # -- Check-ins --
 
@@ -234,14 +240,17 @@ class Repository:
     # -- Admin access --
 
     def get_admin_user(self, user_id: str) -> dict[str, Any] | None:
-        result = (
-            self._client.table("admin_users")
-            .select("user_id, role, created_at")
-            .eq("user_id", user_id)
-            .maybe_single()
-            .execute()
-        )
-        return result.data
+        try:
+            result = (
+                self._client.table("admin_users")
+                .select("user_id, role, created_at")
+                .eq("user_id", user_id)
+                .maybe_single()
+                .execute()
+            )
+            return result.data if result else None
+        except Exception:
+            return None
 
     def list_admin_users(self) -> list[dict[str, Any]]:
         result = (
@@ -294,14 +303,17 @@ class Repository:
     # -- Tester feedback --
 
     def get_user_role(self, user_id: str) -> dict[str, Any] | None:
-        result = (
-            self._client.table("user_roles")
-            .select("user_id, role, created_at")
-            .eq("user_id", user_id)
-            .maybe_single()
-            .execute()
-        )
-        return result.data
+        try:
+            result = (
+                self._client.table("user_roles")
+                .select("user_id, role, created_at")
+                .eq("user_id", user_id)
+                .maybe_single()
+                .execute()
+            )
+            return result.data if result else None
+        except Exception:
+            return None
 
     def create_tester_report(self, payload: dict[str, Any]) -> dict[str, Any]:
         result = self._client.table("tester_reports").insert(payload).execute()
@@ -343,15 +355,18 @@ class Repository:
     # -- Friend Notes --
 
     def get_friend_note(self, user_id: str, friend_id: str) -> dict[str, Any] | None:
-        result = (
-            self._client.table("friend_notes")
-            .select("*")
-            .eq("user_id", user_id)
-            .eq("friend_id", friend_id)
-            .maybe_single()
-            .execute()
-        )
-        return result.data
+        try:
+            result = (
+                self._client.table("friend_notes")
+                .select("*")
+                .eq("user_id", user_id)
+                .eq("friend_id", friend_id)
+                .maybe_single()
+                .execute()
+            )
+            return result.data if result else None
+        except Exception:
+            return None
 
     def upsert_friend_note(self, user_id: str, friend_id: str, content: str) -> dict[str, Any]:
         payload = {
@@ -375,15 +390,18 @@ class Repository:
     # -- Friend Reminders --------------------------------------------------
 
     def get_friend_reminder(self, user_id: str, friend_id: str) -> dict[str, Any] | None:
-        result = (
-            self._client.table("friend_reminders")
-            .select("*")
-            .eq("user_id", user_id)
-            .eq("friend_id", friend_id)
-            .maybe_single()
-            .execute()
-        )
-        return result.data if result else None
+        try:
+            result = (
+                self._client.table("friend_reminders")
+                .select("*")
+                .eq("user_id", user_id)
+                .eq("friend_id", friend_id)
+                .maybe_single()
+                .execute()
+            )
+            return result.data if result else None
+        except Exception:
+            return None
 
     def list_friend_reminders(self, user_id: str) -> list[dict[str, Any]]:
         result = (
@@ -470,16 +488,19 @@ class Repository:
         return result.data[0] if result.data else payload
 
     def get_warmth_snapshot(self, user_id: str) -> dict[str, Any] | None:
-        result = (
-            self._client.table("warmth_snapshots")
-            .select("*")
-            .eq("user_id", user_id)
-            .order("snapshot_at", desc=True)
-            .limit(1)
-            .maybe_single()
-            .execute()
-        )
-        return result.data if result else None
+        try:
+            result = (
+                self._client.table("warmth_snapshots")
+                .select("*")
+                .eq("user_id", user_id)
+                .order("snapshot_at", desc=True)
+                .limit(1)
+                .maybe_single()
+                .execute()
+            )
+            return result.data if result else None
+        except Exception:
+            return None
 
     # -- Nudge Log ----------------------------------------------------------
 
@@ -536,15 +557,18 @@ class Repository:
             return None  # unique constraint — already achieved
 
     def has_milestone(self, user_id: str, milestone_key: str) -> bool:
-        result = (
-            self._client.table("milestones")
-            .select("id")
-            .eq("user_id", user_id)
-            .eq("milestone_key", milestone_key)
-            .maybe_single()
-            .execute()
-        )
-        return result.data is not None if result else False
+        try:
+            result = (
+                self._client.table("milestones")
+                .select("id")
+                .eq("user_id", user_id)
+                .eq("milestone_key", milestone_key)
+                .maybe_single()
+                .execute()
+            )
+            return result.data is not None if result else False
+        except Exception:
+            return False
 
     # -- Rest Days ----------------------------------------------------------
 
@@ -577,15 +601,18 @@ class Repository:
     def is_rest_day(self, user_id: str, check_date: str | None = None) -> bool:
         from datetime import date as d
         date_str = check_date or d.today().isoformat()
-        result = (
-            self._client.table("rest_days")
-            .select("id")
-            .eq("user_id", user_id)
-            .eq("rest_date", date_str)
-            .maybe_single()
-            .execute()
-        )
-        return result.data is not None if result else False
+        try:
+            result = (
+                self._client.table("rest_days")
+                .select("id")
+                .eq("user_id", user_id)
+                .eq("rest_date", date_str)
+                .maybe_single()
+                .execute()
+            )
+            return result.data is not None if result else False
+        except Exception:
+            return False
 
     # -- Eligible users for nudge dispatch ----------------------------------
 
