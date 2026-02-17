@@ -10,6 +10,7 @@ FastAPI app with:
 
 from fastapi import FastAPI
 import logging
+from contextlib import asynccontextmanager
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import get_settings
@@ -22,11 +23,30 @@ from app.routers import friend_reminders
 
 settings = get_settings()
 
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Startup: start the nudge scheduler
+    try:
+        from app.services.nudge_scheduler import start_scheduler
+        start_scheduler()
+    except Exception as e:
+        logging.getLogger("friendly").warning(f"Scheduler start failed: {e}")
+    yield
+    # Shutdown: stop the scheduler
+    try:
+        from app.services.nudge_scheduler import stop_scheduler
+        stop_scheduler()
+    except Exception:
+        pass
+
+
 app = FastAPI(
     title="Friendly Backend",
-    version="0.1.0-pilot",
-    docs_url="/docs" if not settings.is_pilot else None,   # disable Swagger in pilot
+    version="0.2.0-nudge",
+    docs_url="/docs" if not settings.is_pilot else None,
     redoc_url=None,
+    lifespan=lifespan,
 )
 
 # Enable debug logging for authentication middleware

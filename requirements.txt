@@ -17,3 +17,9 @@ cryptography==41.*
 
 # HTTP client (required by supabase-py)
 httpx==0.28.*
+
+# Push notifications (FCM)
+firebase-admin==6.*
+
+# Background job scheduling
+APScheduler==3.10.*

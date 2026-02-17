@@ -427,3 +427,196 @@ class Repository:
             "user_id", user_id
         ).eq("friend_id", friend_id).execute()
         return True
+
+    # -- Push / Nudge -------------------------------------------------------
+
+    def update_push_token(self, user_id: str, token: str) -> None:
+        self._client.table("profiles").update(
+            {"push_token": token}
+        ).eq("id", user_id).execute()
+
+    def update_nudge_preferences(
+        self, user_id: str, push_opt_in: bool | None = None,
+        preferred_nudge_time: str | None = None,
+    ) -> dict[str, Any]:
+        payload: dict[str, Any] = {}
+        if push_opt_in is not None:
+            payload["push_opt_in"] = push_opt_in
+        if preferred_nudge_time is not None:
+            payload["preferred_nudge_time"] = preferred_nudge_time
+        if not payload:
+            return self.get_profile(user_id) or {}
+        self._client.table("profiles").update(payload).eq("id", user_id).execute()
+        return self.get_profile(user_id) or {}
+
+    def get_nudge_preferences(self, user_id: str) -> dict[str, Any]:
+        profile = self.get_profile(user_id)
+        if not profile:
+            return {}
+        return {
+            "push_opt_in": profile.get("push_opt_in", False),
+            "preferred_nudge_time": profile.get("preferred_nudge_time", "18:00"),
+            "last_nudge_sent_at": profile.get("last_nudge_sent_at"),
+            "nudge_cycle_count": profile.get("nudge_cycle_count", 0),
+        }
+
+    # -- Warmth Snapshots ---------------------------------------------------
+
+    def upsert_warmth_snapshot(self, user_id: str, data: dict[str, Any]) -> dict[str, Any]:
+        payload = {"user_id": user_id, **data}
+        # Keep only the latest snapshot per user
+        self._client.table("warmth_snapshots").delete().eq("user_id", user_id).execute()
+        result = self._client.table("warmth_snapshots").insert(payload).execute()
+        return result.data[0] if result.data else payload
+
+    def get_warmth_snapshot(self, user_id: str) -> dict[str, Any] | None:
+        result = (
+            self._client.table("warmth_snapshots")
+            .select("*")
+            .eq("user_id", user_id)
+            .order("snapshot_at", desc=True)
+            .limit(1)
+            .maybe_single()
+            .execute()
+        )
+        return result.data if result else None
+
+    # -- Nudge Log ----------------------------------------------------------
+
+    def create_nudge_log(
+        self, user_id: str, nudge_tier: str, copy_text: str,
+        friend_id: str | None = None,
+    ) -> dict[str, Any]:
+        payload: dict[str, Any] = {
+            "user_id": user_id,
+            "nudge_tier": nudge_tier,
+            "copy_text": copy_text,
+        }
+        if friend_id:
+            payload["friend_id"] = friend_id
+        result = self._client.table("nudge_log").insert(payload).execute()
+        return result.data[0] if result.data else payload
+
+    def acknowledge_nudge(self, nudge_id: str) -> None:
+        self._client.table("nudge_log").update(
+            {"acknowledged_at": datetime.utcnow().isoformat()}
+        ).eq("id", nudge_id).execute()
+
+    def get_recent_nudge_count(self, user_id: str, since: datetime) -> int:
+        result = (
+            self._client.table("nudge_log")
+            .select("id", count="exact")
+            .eq("user_id", user_id)
+            .gte("sent_at", since.isoformat())
+            .execute()
+        )
+        return result.count or 0
+
+    # -- Milestones ---------------------------------------------------------
+
+    def list_milestones(self, user_id: str) -> list[dict[str, Any]]:
+        result = (
+            self._client.table("milestones")
+            .select("*")
+            .eq("user_id", user_id)
+            .order("achieved_at", desc=True)
+            .execute()
+        )
+        return result.data or []
+
+    def create_milestone(self, user_id: str, milestone_key: str) -> dict[str, Any] | None:
+        """Insert milestone if not already achieved. Returns None if duplicate."""
+        try:
+            result = self._client.table("milestones").insert({
+                "user_id": user_id,
+                "milestone_key": milestone_key,
+            }).execute()
+            return result.data[0] if result.data else None
+        except Exception:
+            return None  # unique constraint — already achieved
+
+    def has_milestone(self, user_id: str, milestone_key: str) -> bool:
+        result = (
+            self._client.table("milestones")
+            .select("id")
+            .eq("user_id", user_id)
+            .eq("milestone_key", milestone_key)
+            .maybe_single()
+            .execute()
+        )
+        return result.data is not None if result else False
+
+    # -- Rest Days ----------------------------------------------------------
+
+    def add_rest_day(self, user_id: str, rest_date: str | None = None) -> dict[str, Any]:
+        from datetime import date as d
+        payload: dict[str, Any] = {"user_id": user_id}
+        if rest_date:
+            payload["rest_date"] = rest_date
+        else:
+            payload["rest_date"] = d.today().isoformat()
+        try:
+            result = self._client.table("rest_days").insert(payload).execute()
+            return result.data[0] if result.data else payload
+        except Exception:
+            return payload  # already exists
+
+    def count_rest_days_this_week(self, user_id: str) -> int:
+        from datetime import date, timedelta
+        today = date.today()
+        week_start = today - timedelta(days=today.weekday())
+        result = (
+            self._client.table("rest_days")
+            .select("id", count="exact")
+            .eq("user_id", user_id)
+            .gte("rest_date", week_start.isoformat())
+            .execute()
+        )
+        return result.count or 0
+
+    def is_rest_day(self, user_id: str, check_date: str | None = None) -> bool:
+        from datetime import date as d
+        date_str = check_date or d.today().isoformat()
+        result = (
+            self._client.table("rest_days")
+            .select("id")
+            .eq("user_id", user_id)
+            .eq("rest_date", date_str)
+            .maybe_single()
+            .execute()
+        )
+        return result.data is not None if result else False
+
+    # -- Eligible users for nudge dispatch ----------------------------------
+
+    def list_nudge_eligible_users(self) -> list[dict[str, Any]]:
+        """Return profiles with push_opt_in=true and a push_token."""
+        result = (
+            self._client.table("profiles")
+            .select("id, push_token, preferred_nudge_time, last_nudge_sent_at, nudge_cycle_count")
+            .eq("push_opt_in", True)
+            .not_.is_("push_token", "null")
+            .execute()
+        )
+        return result.data or []
+
+    def mark_nudge_sent(self, user_id: str) -> None:
+        self._client.table("profiles").update({
+            "last_nudge_sent_at": datetime.utcnow().isoformat(),
+            "nudge_cycle_count": self._client.rpc(
+                "increment_nudge_cycle", {"uid": user_id}
+            ) if False else None,  # handled in Python
+        }).eq("id", user_id).execute()
+
+    def increment_nudge_cycle(self, user_id: str) -> None:
+        profile = self.get_profile(user_id)
+        count = (profile or {}).get("nudge_cycle_count", 0)
+        self._client.table("profiles").update({
+            "nudge_cycle_count": count + 1,
+            "last_nudge_sent_at": datetime.utcnow().isoformat(),
+        }).eq("id", user_id).execute()
+
+    def reset_nudge_cycle(self, user_id: str) -> None:
+        self._client.table("profiles").update({
+            "nudge_cycle_count": 0,
+        }).eq("id", user_id).execute()

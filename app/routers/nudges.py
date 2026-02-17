@@ -260,3 +260,265 @@ def check_nudge_eligibility(
         copy=copy,
         friend_name=friend_name,
     )
+
+
+# --------------------------------------------------------------------------
+# Push token & preferences
+# --------------------------------------------------------------------------
+
+class PushTokenRequest(BaseModel):
+    token: str
+
+
+class NudgePreferencesRequest(BaseModel):
+    push_opt_in: Optional[bool] = None
+    preferred_nudge_time: Optional[str] = None  # "HH:MM"
+
+
+class NudgePreferencesResponse(BaseModel):
+    push_opt_in: bool
+    preferred_nudge_time: str
+    last_nudge_sent_at: Optional[str] = None
+    nudge_cycle_count: int
+
+
+@router.post("/register-push-token")
+def register_push_token(
+    body: PushTokenRequest,
+    user_id: str = Depends(get_current_user_id),
+    repo: Repository = Depends(get_repository),
+):
+    repo.update_push_token(user_id, body.token)
+    return {"ok": True}
+
+
+@router.get("/preferences", response_model=NudgePreferencesResponse)
+def get_nudge_preferences(
+    user_id: str = Depends(get_current_user_id),
+    repo: Repository = Depends(get_repository),
+):
+    prefs = repo.get_nudge_preferences(user_id)
+    return NudgePreferencesResponse(
+        push_opt_in=prefs.get("push_opt_in", False),
+        preferred_nudge_time=prefs.get("preferred_nudge_time", "18:00"),
+        last_nudge_sent_at=prefs.get("last_nudge_sent_at"),
+        nudge_cycle_count=prefs.get("nudge_cycle_count", 0),
+    )
+
+
+@router.put("/preferences", response_model=NudgePreferencesResponse)
+def update_nudge_preferences(
+    body: NudgePreferencesRequest,
+    user_id: str = Depends(get_current_user_id),
+    repo: Repository = Depends(get_repository),
+):
+    repo.update_nudge_preferences(
+        user_id,
+        push_opt_in=body.push_opt_in,
+        preferred_nudge_time=body.preferred_nudge_time,
+    )
+    return get_nudge_preferences(user_id=user_id, repo=repo)
+
+
+# --------------------------------------------------------------------------
+# Milestones
+# --------------------------------------------------------------------------
+
+MILESTONE_DEFS = {
+    "first_outreach": {"min_interactions": 1},
+    "3_day_rhythm": {"min_week_streak": 0, "min_days_active": 3},
+    "7_day_rhythm": {"min_week_streak": 1},
+    "1_month_rhythm": {"min_week_streak": 4},
+    "3_month_rhythm": {"min_week_streak": 12},
+}
+
+MILESTONE_COPY = {
+    "first_outreach": {"emoji": "🌱", "copy": "You showed up for someone today."},
+    "3_day_rhythm": {"emoji": "💚", "copy": "Three days of caring. That's something special."},
+    "7_day_rhythm": {"emoji": "🌤️", "copy": "A week of warmth. Your people feel it."},
+    "1_month_rhythm": {"emoji": "🔥", "copy": "A month of gentle attention. You're building something real."},
+    "3_month_rhythm": {"emoji": "💛", "copy": "Three months of showing up. That's a rare and beautiful thing."},
+}
+
+
+class MilestoneResponse(BaseModel):
+    milestone_key: str
+    achieved_at: str
+    emoji: str
+    copy: str
+
+
+class MilestoneCheckResponse(BaseModel):
+    new_milestones: List[MilestoneResponse]
+    all_milestones: List[MilestoneResponse]
+
+
+@router.get("/milestones")
+def list_milestones(
+    user_id: str = Depends(get_current_user_id),
+    repo: Repository = Depends(get_repository),
+):
+    rows = repo.list_milestones(user_id)
+    return [
+        MilestoneResponse(
+            milestone_key=r["milestone_key"],
+            achieved_at=str(r["achieved_at"]),
+            emoji=MILESTONE_COPY.get(r["milestone_key"], {}).get("emoji", "✨"),
+            copy=MILESTONE_COPY.get(r["milestone_key"], {}).get("copy", ""),
+        )
+        for r in rows
+    ]
+
+
+@router.post("/milestones/check", response_model=MilestoneCheckResponse)
+def check_milestones(
+    user_id: str = Depends(get_current_user_id),
+    repo: Repository = Depends(get_repository),
+):
+    """Compute & persist any newly achieved milestones."""
+    warmth = get_warmth(user_id=user_id, repo=repo)
+    interactions = repo.list_interactions(user_id, limit=200)
+
+    new_milestones: List[MilestoneResponse] = []
+
+    # first_outreach
+    if len(interactions) >= 1 and not repo.has_milestone(user_id, "first_outreach"):
+        m = repo.create_milestone(user_id, "first_outreach")
+        if m:
+            info = MILESTONE_COPY["first_outreach"]
+            new_milestones.append(MilestoneResponse(
+                milestone_key="first_outreach",
+                achieved_at=str(m["achieved_at"]),
+                emoji=info["emoji"], copy=info["copy"],
+            ))
+
+    # Week-streak based milestones
+    streak_milestones = [
+        ("7_day_rhythm", 1),
+        ("1_month_rhythm", 4),
+        ("3_month_rhythm", 12),
+    ]
+    for key, min_streak in streak_milestones:
+        if warmth.week_streak >= min_streak and not repo.has_milestone(user_id, key):
+            m = repo.create_milestone(user_id, key)
+            if m:
+                info = MILESTONE_COPY[key]
+                new_milestones.append(MilestoneResponse(
+                    milestone_key=key,
+                    achieved_at=str(m["achieved_at"]),
+                    emoji=info["emoji"], copy=info["copy"],
+                ))
+
+    # 3-day rhythm: check if user has interactions on 3 distinct days in last 7 days
+    now = datetime.now(timezone.utc)
+    recent_dates = set()
+    for i in interactions:
+        ts = i.get("created_at")
+        if isinstance(ts, str):
+            ts = datetime.fromisoformat(ts)
+        if ts:
+            if ts.tzinfo is None:
+                ts = ts.replace(tzinfo=timezone.utc)
+            if (now - ts).days <= 7:
+                recent_dates.add(ts.date())
+    if len(recent_dates) >= 3 and not repo.has_milestone(user_id, "3_day_rhythm"):
+        m = repo.create_milestone(user_id, "3_day_rhythm")
+        if m:
+            info = MILESTONE_COPY["3_day_rhythm"]
+            new_milestones.append(MilestoneResponse(
+                milestone_key="3_day_rhythm",
+                achieved_at=str(m["achieved_at"]),
+                emoji=info["emoji"], copy=info["copy"],
+            ))
+
+    all_rows = repo.list_milestones(user_id)
+    all_milestones = [
+        MilestoneResponse(
+            milestone_key=r["milestone_key"],
+            achieved_at=str(r["achieved_at"]),
+            emoji=MILESTONE_COPY.get(r["milestone_key"], {}).get("emoji", "✨"),
+            copy=MILESTONE_COPY.get(r["milestone_key"], {}).get("copy", ""),
+        )
+        for r in all_rows
+    ]
+
+    return MilestoneCheckResponse(
+        new_milestones=new_milestones,
+        all_milestones=all_milestones,
+    )
+
+
+# --------------------------------------------------------------------------
+# Warmth snapshot (cache for widgets)
+# --------------------------------------------------------------------------
+
+@router.post("/warmth/snapshot")
+def save_warmth_snapshot(
+    user_id: str = Depends(get_current_user_id),
+    repo: Repository = Depends(get_repository),
+):
+    """Compute warmth and cache it for widget consumption."""
+    warmth = get_warmth(user_id=user_id, repo=repo)
+    data = {
+        "warmth_tier": warmth.warmth_tier,
+        "week_streak": warmth.week_streak,
+        "last_outreach_at": None,
+        "suggested_friend_id": warmth.suggested_friend.friend_id if warmth.suggested_friend else None,
+        "suggested_friend_name": warmth.suggested_friend.friend_name if warmth.suggested_friend else None,
+    }
+    return repo.upsert_warmth_snapshot(user_id, data)
+
+
+@router.get("/warmth/snapshot")
+def get_warmth_snapshot(
+    user_id: str = Depends(get_current_user_id),
+    repo: Repository = Depends(get_repository),
+):
+    snapshot = repo.get_warmth_snapshot(user_id)
+    if not snapshot:
+        return save_warmth_snapshot(user_id=user_id, repo=repo)
+    return snapshot
+
+
+# --------------------------------------------------------------------------
+# Rest days
+# --------------------------------------------------------------------------
+
+class RestDayResponse(BaseModel):
+    is_rest_day: bool
+    rest_days_used_this_week: int
+    rest_days_remaining: int  # out of 2 per week
+
+
+@router.post("/rest-day", response_model=RestDayResponse)
+def take_rest_day(
+    user_id: str = Depends(get_current_user_id),
+    repo: Repository = Depends(get_repository),
+):
+    used = repo.count_rest_days_this_week(user_id)
+    if used >= 2:
+        return RestDayResponse(
+            is_rest_day=repo.is_rest_day(user_id),
+            rest_days_used_this_week=used,
+            rest_days_remaining=0,
+        )
+    repo.add_rest_day(user_id)
+    used = repo.count_rest_days_this_week(user_id)
+    return RestDayResponse(
+        is_rest_day=True,
+        rest_days_used_this_week=used,
+        rest_days_remaining=max(0, 2 - used),
+    )
+
+
+@router.get("/rest-day", response_model=RestDayResponse)
+def get_rest_day_status(
+    user_id: str = Depends(get_current_user_id),
+    repo: Repository = Depends(get_repository),
+):
+    used = repo.count_rest_days_this_week(user_id)
+    return RestDayResponse(
+        is_rest_day=repo.is_rest_day(user_id),
+        rest_days_used_this_week=used,
+        rest_days_remaining=max(0, 2 - used),
+    )
