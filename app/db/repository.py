@@ -352,6 +352,26 @@ class Repository:
         )
         return result.data[0] if result.data else {}
 
+    def update_tester_report_github_issue(
+        self, report_id: str, issue_url: str, issue_number: int
+    ) -> dict[str, Any]:
+        result = (
+            self._client.table("tester_reports")
+            .update({"github_issue_url": issue_url, "github_issue_number": issue_number})
+            .eq("id", report_id)
+            .execute()
+        )
+        return result.data[0] if result.data else {}
+
+    def get_tester_report(self, report_id: str) -> dict[str, Any] | None:
+        result = (
+            self._client.table("tester_reports")
+            .select("*")
+            .eq("id", report_id)
+            .execute()
+        )
+        return result.data[0] if result.data else None
+
     # -- Friend Notes --
 
     def get_friend_note(self, user_id: str, friend_id: str) -> dict[str, Any] | None:

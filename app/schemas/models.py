@@ -265,9 +265,16 @@ class TesterReportResponse(BaseModel):
     app_version: Optional[str] = None
     contact: Optional[str] = None
     status: str
+    github_issue_url: Optional[str] = None
+    github_issue_number: Optional[int] = None
     created_at: datetime
     updated_at: datetime
 
 
 class TesterReportStatusUpdate(BaseModel):
     status: str
+
+
+class GitHubIssueResponse(BaseModel):
+    url: str
+    number: int

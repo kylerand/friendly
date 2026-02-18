@@ -34,6 +34,10 @@ class Settings(BaseSettings):
     # backend will verify via the Supabase JWKS endpoint.
     supabase_jwt_secret: str | None = None
 
+    # -- GitHub (optional — enables "Create GitHub Issue" from feedback) --
+    github_token: str | None = None
+    github_repo: str = "kylerand/friendly-admin-webui"
+
     # -- App --
     environment: str = "development"  # "development" | "pilot" | "production"
     allowed_origins: str = "*"        # Comma-separated for CORS
