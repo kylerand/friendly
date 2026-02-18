@@ -63,7 +63,7 @@ async def create_github_issue(
                 "Accept": "application/vnd.github+json",
                 "X-GitHub-Api-Version": "2022-11-28",
             },
-            json={"title": title, "body": body, "labels": labels},
+            json={"title": title, "body": body, "labels": labels, "assignees": ["copilot"]},
             timeout=15,
         )
         resp.raise_for_status()
