@@ -416,10 +416,10 @@ class Repository:
                 .select("*")
                 .eq("user_id", user_id)
                 .eq("friend_id", friend_id)
-                .maybe_single()
+                .limit(1)
                 .execute()
             )
-            return result.data if result else None
+            return result.data[0] if result.data else None
         except Exception:
             return None
 
