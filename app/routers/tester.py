@@ -71,6 +71,7 @@ def update_report_status(
 @router.post("/reports/{report_id}/github-issue", response_model=GitHubIssueResponse)
 async def create_report_github_issue(
     report_id: str,
+    target: str | None = None,
     admin=Depends(require_admin_user),
     repo: Repository = Depends(get_repository),
 ):
@@ -80,6 +81,13 @@ async def create_report_github_issue(
     settings = get_settings()
     if not settings.github_token:
         raise HTTPException(status_code=501, detail="GitHub integration not configured (GITHUB_TOKEN missing)")
+
+    target_repos = {
+        "api": settings.github_repo_api,
+        "mobile": settings.github_repo_mobile,
+        "web": settings.github_repo_web,
+    }
+    github_repo = target_repos.get(target, settings.github_repo) if target else settings.github_repo
 
     report = repo.get_tester_report(report_id)
     if not report:
@@ -91,7 +99,7 @@ async def create_report_github_issue(
     try:
         issue = await create_github_issue(
             token=settings.github_token,
-            repo=settings.github_repo,
+            repo=github_repo,
             report=report,
         )
     except Exception as exc:

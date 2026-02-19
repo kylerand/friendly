@@ -37,6 +37,9 @@ class Settings(BaseSettings):
     # -- GitHub (optional — enables "Create GitHub Issue" from feedback) --
     github_token: str | None = None
     github_repo: str = "kylerand/friendly-admin-webui"
+    github_repo_api: str = "kylerand/friendly"
+    github_repo_mobile: str = "kylerand/friendly-mobile"
+    github_repo_web: str = "kylerand/friendly-admin-webui"
 
     # -- App --
     environment: str = "development"  # "development" | "pilot" | "production"
