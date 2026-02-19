@@ -56,16 +56,27 @@ async def create_github_issue(
     labels = [_label_for_type(report.get("type", "bug")), _label_for_severity(report.get("severity", "medium"))]
 
     async with httpx.AsyncClient() as client:
+        headers = {
+            "Authorization": f"Bearer {token}",
+            "Accept": "application/vnd.github+json",
+            "X-GitHub-Api-Version": "2022-11-28",
+        }
+        # Try with labels and assignee; fall back to title+body only on 422
+        payload: dict = {"title": title, "body": body, "labels": labels, "assignees": ["copilot"]}
         resp = await client.post(
             f"{GITHUB_API}/repos/{repo}/issues",
-            headers={
-                "Authorization": f"Bearer {token}",
-                "Accept": "application/vnd.github+json",
-                "X-GitHub-Api-Version": "2022-11-28",
-            },
-            json={"title": title, "body": body, "labels": labels, "assignees": ["copilot"]},
+            headers=headers,
+            json=payload,
             timeout=15,
         )
+        if resp.status_code == 422:
+            payload = {"title": title, "body": body}
+            resp = await client.post(
+                f"{GITHUB_API}/repos/{repo}/issues",
+                headers=headers,
+                json=payload,
+                timeout=15,
+            )
         resp.raise_for_status()
         data = resp.json()
         return {"url": data["html_url"], "number": data["number"]}
