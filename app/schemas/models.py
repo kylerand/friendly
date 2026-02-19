@@ -10,7 +10,7 @@ All timestamps use datetime with timezone awareness.
 
 from datetime import datetime
 from enum import Enum
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional
 from uuid import UUID
 
 from pydantic import BaseModel, Field
@@ -26,7 +26,7 @@ class ProfileResponse(BaseModel):
     avatar_url: Optional[str] = None
     phone_number: Optional[str] = None
     email: Optional[str] = None
-    metadata: Dict[str, str] = Field(default_factory=dict)
+    metadata: Dict[str, Any] = Field(default_factory=dict)
     created_at: datetime
 
 
@@ -43,7 +43,7 @@ class ProfileUpdate(BaseModel):
     avatar_url: Optional[str] = None
     phone_number: Optional[str] = None
     email: Optional[str] = None
-    metadata: Optional[Dict[str, str]] = None
+    metadata: Optional[Dict[str, Any]] = None
 
 
 # --------------------------------------------------------------------------
@@ -105,7 +105,7 @@ class CheckInResponse(BaseModel):
 class InteractionCreate(BaseModel):
     target_id: UUID
     type: str = "message"
-    metadata: Dict[str, str] = Field(default_factory=dict)
+    metadata: Dict[str, Any] = Field(default_factory=dict)
 
 
 class InteractionResponse(BaseModel):
@@ -113,7 +113,7 @@ class InteractionResponse(BaseModel):
     user_id: UUID
     target_id: UUID
     type: str
-    metadata: Dict[str, str] = Field(default_factory=dict)
+    metadata: Dict[str, Any] = Field(default_factory=dict)
     created_at: datetime
 
 
