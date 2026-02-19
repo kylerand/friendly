@@ -46,6 +46,7 @@ class Repository:
         result = (
             self._client.table("profiles")
             .upsert(payload, on_conflict="id")
+            .select()
             .execute()
         )
         return result.data[0] if result.data else payload
@@ -265,6 +266,7 @@ class Repository:
         result = (
             self._client.table("admin_users")
             .upsert({"user_id": user_id, "role": role}, on_conflict="user_id")
+            .select()
             .execute()
         )
         return result.data[0] if result.data else {"user_id": user_id, "role": role}
@@ -397,6 +399,7 @@ class Repository:
         result = (
             self._client.table("friend_notes")
             .upsert(payload, on_conflict="user_id,friend_id")
+            .select()
             .execute()
         )
         return result.data[0] if result.data else payload
@@ -444,6 +447,7 @@ class Repository:
         result = (
             self._client.table("friend_reminders")
             .upsert(payload, on_conflict="user_id,friend_id")
+            .select()
             .execute()
         )
         return result.data[0] if result.data else payload
