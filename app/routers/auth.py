@@ -47,7 +47,7 @@ def update_me(
     if not profile:
         raise HTTPException(status_code=404, detail="Profile not found")
 
-    updated = repo.upsert_profile(
+    updated = repo.update_profile(
         user_id=user_id,
         display_name=update_data.get("display_name", profile["display_name"]),
         **{k: v for k, v in update_data.items() if k != "display_name"},
