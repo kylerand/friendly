@@ -51,6 +51,12 @@ class Repository:
         )
         return result.data[0] if result.data else payload
 
+    def update_profile(self, user_id: str, **kwargs: Any) -> dict[str, Any]:
+        """Partial update of an existing profile. Only the supplied fields are changed;
+        unspecified fields (including push_opt_in) are left untouched."""
+        self._client.table("profiles").update(kwargs).eq("id", user_id).execute()
+        return self.get_profile(user_id) or {}
+
     def search_profiles(self, query: str, exclude_id: str | None = None, limit: int = 20) -> list[dict[str, Any]]:
         """Search profiles by display_name (case-insensitive partial match)."""
         builder = (
