@@ -56,6 +56,17 @@ class Repository:
         self._client.table("profiles").update(kwargs).eq("id", user_id).execute()
         return self.get_profile(user_id) or {}
 
+    def delete_account(self, user_id: str) -> None:
+        """Delete user profile and auth account.
+
+        Profile row cascades to friendships, interactions, notes, reminders, etc.
+        The auth.users row is removed via the admin API.
+        """
+        # Delete profile (cascades to all dependent tables)
+        self._client.table("profiles").delete().eq("id", user_id).execute()
+        # Delete Supabase Auth user
+        self._client.auth.admin.delete_user(user_id)
+
     def search_profiles(self, query: str, exclude_id: str | None = None, limit: int = 20) -> list[dict[str, Any]]:
         """Search profiles by display_name (case-insensitive partial match)."""
         builder = (

@@ -7,6 +7,7 @@ login, or password management — the mobile app talks to Supabase directly.
 This router provides:
 - GET /auth/me — returns the authenticated user's profile
 - PATCH /auth/me — updates the authenticated user's profile
+- DELETE /auth/me — permanently deletes the user's account and all data
 
 The JWT is verified by the `get_current_user_id` dependency.
 """
@@ -53,4 +54,18 @@ def update_me(
         **{k: v for k, v in update_data.items() if k != "display_name"},
     )
     return updated
+
+
+@router.delete("/me", status_code=200)
+def delete_me(
+    user_id: str = Depends(get_current_user_id),
+    repo: Repository = Depends(get_repository),
+):
+    """Permanently delete the authenticated user's account and all associated data."""
+    profile = repo.get_profile(user_id)
+    if not profile:
+        raise HTTPException(status_code=404, detail="Profile not found")
+
+    repo.delete_account(user_id)
+    return {"detail": "Account deleted"}
 
