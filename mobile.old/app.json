@@ -1,0 +1,63 @@
+{
+  "name": "FriendlyMobile",
+  "displayName": "Friendly Mobile",
+  "expo": {
+    "name": "Friendly",
+    "slug": "friendly-mobile",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "automatic",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#FAF8F5",
+      "dark": {
+        "image": "./assets/splash.png",
+        "resizeMode": "contain",
+        "backgroundColor": "#1A1614"
+      }
+    },
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "bundleIdentifier": "com.kylerand.friendly",
+      "supportsTablet": false,
+      "infoPlist": {
+        "NSFaceIDUsageDescription": "Use Face ID to securely sign in",
+        "NSContactsUsageDescription": "Friendly only reads the contact you choose — nothing is stored or uploaded."
+      }
+    },
+    "android": {
+      "package": "com.friendly.mobile",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#FAF8F5"
+      }
+    },
+    "newArchEnabled": false,
+    "extra": {
+      "eas": {
+        "projectId": "ea2d376b-604b-4ed2-9b8d-44bc4581bb43"
+      },
+      "supabaseUrl": "https://fjufukkcezipmnfeibkt.supabase.co",
+      "supabaseAnonKey": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZqdWZ1a2tjZXppcG1uZmVpYmt0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzA1OTIzNjcsImV4cCI6MjA4NjE2ODM2N30.J0L2KsC7lk4bVsjWqhyIYwLhst5l8MTk6pV_9k6nJ58",
+      "apiUrl": "https://web-production-4f15d.up.railway.app"
+    },
+    "scheme": "friendly",
+    "plugins": [
+      "expo-secure-store",
+      [
+        "expo-contacts",
+        {
+          "contactsPermission": "Friendly only reads the contact you choose — nothing is stored or uploaded."
+        }
+      ]
+    ],
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "owner": "kylerand1989"
+  }
+}

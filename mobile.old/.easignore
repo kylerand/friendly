@@ -1,0 +1,19 @@
+# EAS Build ignore file — speeds up project upload by
+# excluding files that EAS regenerates during the build.
+
+# CocoaPods (EAS runs pod install on the build server)
+ios/Pods/
+
+# Build artifacts
+ios/build/
+android/app/build/
+
+# Dev tooling
+node_modules/.cache/
+.expo/
+
+# Git
+.git/
+
+# Design assets not needed at build time
+../design/

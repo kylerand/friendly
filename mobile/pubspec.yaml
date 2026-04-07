@@ -1,0 +1,94 @@
+name: friendly
+description: "Friendly — a relationship-care app"
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.7.0
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # Supabase
+  supabase_flutter: ^2.8.0
+
+  # State management
+  flutter_riverpod: ^2.6.1
+
+  # Routing
+  go_router: ^14.8.1
+
+  # HTTP
+  http: ^1.3.0
+
+  # SVG rendering (for DiceBear avatars)
+  flutter_svg: ^2.0.17
+
+  # Icons (Phosphor equivalent)
+  phosphor_flutter: ^2.1.0
+
+  # URL launcher (for handoff: phone, sms, email)
+  url_launcher: ^6.3.1
+
+  # Contacts
+  flutter_contacts: ^1.1.9+2
+
+  # Share
+  share_plus: ^10.1.4
+
+  # Local notifications
+  flutter_local_notifications: ^18.0.1
+
+  # Shared preferences (for local storage)
+  shared_preferences: ^2.3.5
+
+  # Home screen & lock screen widgets
+  home_widget: ^0.7.0
+
+  cupertino_icons: ^1.0.8
+  firebase_core: ^4.4.0
+  firebase_messaging: ^16.1.1
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  integration_test:
+    sdk: flutter
+  flutter_lints: ^5.0.0
+  flutter_launcher_icons: ^0.14.4
+
+flutter:
+  uses-material-design: true
+
+  assets:
+    - assets/friendly_logo_bw.png
+    - assets/friendly_logo_bw.svg
+    - assets/friendly_logo_color.png
+    - assets/friendly_logo_color.svg
+
+  fonts:
+    - family: LePetitCochon
+      fonts:
+        - asset: assets/fonts/LePetitCochon.ttf
+    - family: Chewy
+      fonts:
+        - asset: assets/fonts/Chewy-Regular.ttf
+    - family: Nunito
+      fonts:
+        - asset: assets/fonts/Nunito-Regular.ttf
+          weight: 400
+        - asset: assets/fonts/Nunito-SemiBold.ttf
+          weight: 600
+        - asset: assets/fonts/Nunito-Bold.ttf
+          weight: 700
+        - asset: assets/fonts/Nunito-ExtraBold.ttf
+          weight: 800
+        - asset: assets/fonts/Nunito-Black.ttf
+          weight: 900
+
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: "assets/app_icon_1024.png"
+  remove_alpha_ios: true

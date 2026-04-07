@@ -1,0 +1,105 @@
+.about-page {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 0 5vw 5rem;
+}
+
+.about-hero {
+  text-align: center;
+  padding: 5rem 0 4rem;
+}
+
+.about-hero .eyebrow {
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+  font-size: 0.75rem;
+  color: var(--accent);
+  font-weight: 600;
+  margin-bottom: 1rem;
+}
+
+.about-hero h1 {
+  font-size: clamp(2.4rem, 5vw, 3.4rem);
+  margin-bottom: 1.5rem;
+}
+
+.about-intro {
+  color: var(--muted);
+  font-size: 1.15rem;
+  max-width: 580px;
+  margin: 0 auto;
+  line-height: 1.7;
+}
+
+.about-content {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+.about-card {
+  background: rgba(255, 255, 255, 0.7);
+  border: 1px solid var(--border);
+  border-radius: 24px;
+  padding: 2.5rem;
+  backdrop-filter: blur(8px);
+}
+
+.about-card h2 {
+  font-size: 1.5rem;
+  margin-bottom: 1rem;
+}
+
+.about-card p {
+  color: var(--ink-soft);
+  line-height: 1.75;
+  margin-bottom: 0.75rem;
+}
+
+.about-card a {
+  color: var(--accent);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.about-card a:hover {
+  color: var(--accent-deep);
+}
+
+.principles-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 1.5rem;
+  margin-top: 0.5rem;
+}
+
+.principle {
+  padding: 1.5rem;
+  background: rgba(255, 255, 255, 0.5);
+  border-radius: 16px;
+  border: 1px solid var(--border);
+}
+
+.principle h3 {
+  font-size: 1.05rem;
+  margin-bottom: 0.5rem;
+}
+
+.principle p {
+  font-size: 0.92rem;
+  margin-bottom: 0;
+}
+
+@media (max-width: 640px) {
+  .about-hero {
+    padding: 3rem 0 2.5rem;
+  }
+
+  .about-card {
+    padding: 1.5rem;
+  }
+
+  .principles-grid {
+    grid-template-columns: 1fr;
+  }
+}

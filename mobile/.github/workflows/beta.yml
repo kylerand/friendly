@@ -1,0 +1,182 @@
+name: Beta — PR Build & Deploy
+
+on:
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: beta-${{ github.head_ref }}
+  cancel-in-progress: true
+
+env:
+  FLUTTER_VERSION: "3.41.2"
+  JAVA_VERSION: "17"
+
+jobs:
+  # ─── Analyze & Test ────────────────────────────────────────────────
+  test:
+    name: Analyze & Test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Analyze
+        run: flutter analyze --no-fatal-infos
+
+      - name: Run tests
+        run: flutter test --coverage
+
+  # ─── iOS — TestFlight ──────────────────────────────────────────────
+  ios-beta:
+    name: iOS → TestFlight
+    needs: test
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Install Apple certificate & provisioning profiles
+        env:
+          P12_BASE64: ${{ secrets.IOS_P12_BASE64 }}
+          P12_PASSWORD: ${{ secrets.IOS_P12_PASSWORD }}
+          PROVISION_PROFILE_BASE64: ${{ secrets.IOS_PROVISION_PROFILE_BASE64 }}
+          WIDGET_PROVISION_PROFILE_BASE64: ${{ secrets.IOS_WIDGET_PROVISION_PROFILE_BASE64 }}
+          KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD }}
+        run: |
+          CERTIFICATE_PATH=$RUNNER_TEMP/build_certificate.p12
+          PP_PATH=$RUNNER_TEMP/build_pp.mobileprovision
+          WIDGET_PP_PATH=$RUNNER_TEMP/build_widget_pp.mobileprovision
+          KEYCHAIN_PATH=$RUNNER_TEMP/app-signing.keychain-db
+
+          echo -n "$P12_BASE64" | base64 --decode -o $CERTIFICATE_PATH
+          echo -n "$PROVISION_PROFILE_BASE64" | base64 --decode -o $PP_PATH
+          echo -n "$WIDGET_PROVISION_PROFILE_BASE64" | base64 --decode -o $WIDGET_PP_PATH
+
+          security create-keychain -p "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
+          security set-keychain-settings -lut 21600 $KEYCHAIN_PATH
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
+
+          security import $CERTIFICATE_PATH -P "$P12_PASSWORD" -A -t cert -f pkcs12 -k $KEYCHAIN_PATH
+          security set-key-partition-list -S apple-tool:,apple: -k "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
+          security list-keychain -d user -s $KEYCHAIN_PATH
+
+          mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
+          cp $PP_PATH ~/Library/MobileDevice/Provisioning\ Profiles
+          cp $WIDGET_PP_PATH ~/Library/MobileDevice/Provisioning\ Profiles
+
+      - name: Override signing for CI
+        run: |
+          # The Xcode project uses Automatic signing for local dev.
+          # Switch to Manual + Apple Distribution for the CI release build.
+          python3 << 'PYEOF'
+          import sys
+          path = "ios/Runner.xcodeproj/project.pbxproj"
+          with open(path, "r") as f:
+              content = f.read()
+          content = content.replace(
+              "CODE_SIGN_STYLE = Automatic",
+              "CODE_SIGN_STYLE = Manual",
+          )
+          content = content.replace(
+              '"Apple Development"',
+              '"Apple Distribution"',
+          )
+          # Set PROVISIONING_PROFILE_SPECIFIER per target
+          lines = content.split("\n")
+          current_bundle = None
+          for i, line in enumerate(lines):
+              if "PRODUCT_BUNDLE_IDENTIFIER" in line:
+                  if "FriendlyWidget" in line:
+                      current_bundle = "widget"
+                  elif "com.kylerand.friendly" in line:
+                      current_bundle = "runner"
+              if "PROVISIONING_PROFILE_SPECIFIER" in line and '= ""' in line:
+                  if current_bundle == "widget":
+                      lines[i] = line.replace(
+                          '= ""',
+                          '= "com.kylerand.friendly.FriendlyWidget AppStore"',
+                      )
+                  elif current_bundle == "runner":
+                      lines[i] = line.replace(
+                          '= ""',
+                          '= "com.kylerand.friendly AppStore"',
+                      )
+          with open(path, "w") as f:
+              f.write("\n".join(lines))
+          print("Signing overridden for CI")
+          PYEOF
+
+      - name: Build IPA
+        run: |
+          flutter build ipa \
+            --release \
+            --export-options-plist=ios/ExportOptions.plist
+
+      - name: Upload to TestFlight
+        env:
+          APP_STORE_CONNECT_API_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
+          APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+          APP_STORE_CONNECT_API_KEY: ${{ secrets.APP_STORE_CONNECT_API_KEY_P8 }}
+        run: |
+          API_KEY_PATH=$RUNNER_TEMP/AuthKey.p8
+          echo -n "$APP_STORE_CONNECT_API_KEY" > $API_KEY_PATH
+
+          xcrun altool --upload-app \
+            --type ios \
+            --file build/ios/ipa/*.ipa \
+            --apiKey "$APP_STORE_CONNECT_API_KEY_ID" \
+            --apiIssuer "$APP_STORE_CONNECT_ISSUER_ID"
+
+      - name: Clean up keychain
+        if: ${{ always() }}
+        run: security delete-keychain $RUNNER_TEMP/app-signing.keychain-db
+
+  # ─── Android — Firebase App Distribution ───────────────────────────
+  android-beta:
+    name: Android → Firebase App Distribution
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: ${{ env.JAVA_VERSION }}
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Build APK
+        run: flutter build apk --release
+
+      - name: Upload to Firebase App Distribution
+        uses: wzieba/Firebase-Distribution-Github-Action@v1
+        with:
+          appId: ${{ secrets.FIREBASE_APP_ID }}
+          serviceCredentialsFileContent: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_JSON }}
+          groups: testers
+          file: build/app/outputs/flutter-apk/app-release.apk

@@ -1,0 +1,25 @@
+# Friendly Backend — Python Dependencies
+# Pin major versions for pilot stability. No premature optimization.
+
+fastapi==0.115.*
+uvicorn[standard]==0.34.*
+pydantic==2.10.*
+pydantic-settings==2.7.*
+
+# Supabase
+supabase==2.13.*
+
+# JWT verification
+PyJWT==2.10.*
+
+# Required for ECDSA/RS256 key support used by Supabase JWKS
+cryptography==41.*
+
+# HTTP client (required by supabase-py)
+httpx==0.28.*
+
+# Push notifications (FCM)
+firebase-admin==6.*
+
+# Background job scheduling
+APScheduler==3.10.*
