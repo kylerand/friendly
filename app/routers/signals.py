@@ -17,6 +17,7 @@ presence signal — "someone you care about could use warmth."
 """
 
 from datetime import datetime, timedelta, timezone
+import logging
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
@@ -24,8 +25,10 @@ from uuid import UUID
 
 from app.db.repository import Repository
 from app.dependencies import get_current_user_id, get_repository
+from app.services.push_dispatcher import dispatch_beacon_alert
 
 router = APIRouter(prefix="/signals", tags=["signals"])
+logger = logging.getLogger("friendly.signals")
 
 # --------------------------------------------------------------------------
 # Request / response models
@@ -43,6 +46,8 @@ class CareSignalResponse(BaseModel):
 class BeaconResponse(BaseModel):
     active: bool
     activated_at: str | None = None
+    notified_count: int = 0
+    reachable_friends: int = 0
 
 
 class FriendBeacon(BaseModel):
@@ -140,8 +145,14 @@ def activate_beacon(
         value=1.0,
         tags=["beacon"],
     )
+    delivery = _dispatch_beacon_to_friends(repo, user_id)
 
-    return BeaconResponse(active=True, activated_at=signal.get("created_at"))
+    return BeaconResponse(
+        active=True,
+        activated_at=signal.get("created_at"),
+        notified_count=delivery["sent"],
+        reachable_friends=delivery["reachable"],
+    )
 
 
 @router.delete("/beacon", response_model=BeaconResponse)
@@ -275,3 +286,47 @@ def _parse_ts(ts_str: str) -> datetime:
         return dt
     except (ValueError, TypeError):
         return datetime.min.replace(tzinfo=timezone.utc)
+
+
+def _confirmed_friend_ids(repo: Repository, user_id: str) -> list[str]:
+    friendships = repo.list_friendships(user_id)
+    friend_ids: list[str] = []
+    seen: set[str] = set()
+    for f in friendships:
+        if f.get("status") != "confirmed":
+            continue
+        friend_id = None
+        if f.get("user_id") == user_id:
+            friend_id = f.get("friend_id")
+        elif f.get("friend_id") == user_id:
+            friend_id = f.get("user_id")
+        if friend_id and friend_id not in seen:
+            seen.add(friend_id)
+            friend_ids.append(friend_id)
+    return friend_ids
+
+
+def _dispatch_beacon_to_friends(repo: Repository, user_id: str) -> dict[str, int]:
+    profile = repo.get_profile(user_id) or {}
+    sender_name = profile.get("display_name") or "A friend"
+    sent = 0
+    reachable = 0
+
+    for friend_id in _confirmed_friend_ids(repo, user_id):
+        try:
+            result = dispatch_beacon_alert(repo, friend_id, user_id, sender_name)
+        except Exception as e:
+            logger.warning(f"Beacon alert dispatch failed for friend {friend_id}: {e}")
+            continue
+        if result.get("reachable"):
+            reachable += 1
+        if result.get("sent"):
+            sent += 1
+
+    logger.info(
+        "Beacon activated for %s; sent %s/%s reachable friend alerts",
+        user_id,
+        sent,
+        reachable,
+    )
+    return {"sent": sent, "reachable": reachable}
