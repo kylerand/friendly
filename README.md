@@ -34,6 +34,8 @@ The API runs at `http://localhost:8000`. Health check: `GET /health`.
 | `ENVIRONMENT` | | `development` (default), `pilot`, or `production` |
 | `ALLOWED_ORIGINS` | | Comma-separated CORS origins (default `*`) |
 | `LOG_LEVEL` | | `debug`, `info` (default), `warning`, `error` |
+| `FIREBASE_SERVICE_ACCOUNT_JSON` | For push notifications | Firebase service account JSON, preferred on Railway |
+| `GOOGLE_APPLICATION_CREDENTIALS` | Alternative for push notifications | Absolute path to a Firebase service account JSON file |
 
 ## API Routes
 
