@@ -129,3 +129,54 @@ def dispatch_nudge(repo, user_id: str, nudge_tier: str, copy_text: str,
         repo.increment_nudge_cycle(user_id)
 
     return success
+
+
+def dispatch_beacon_alert(
+    repo,
+    recipient_id: str,
+    sender_id: str,
+    sender_name: str,
+) -> dict[str, bool | str]:
+    """
+    Send a user-triggered support beacon alert to one confirmed friend.
+
+    Beacon alerts are separate from absence nudges: they respect the recipient's
+    beacon preference and push token, but do not consume daily nudge limits.
+    """
+    profile = repo.get_profile(recipient_id)
+    if not profile:
+        return {"sent": False, "reachable": False, "reason": "missing_profile"}
+
+    metadata = profile.get("metadata") or {}
+    if metadata.get("beacon_alerts") is False:
+        logger.debug(f"Beacon skipped: user {recipient_id} disabled beacon alerts")
+        return {"sent": False, "reachable": False, "reason": "disabled"}
+
+    token = profile.get("push_token")
+    if not token:
+        logger.debug(f"Beacon skipped: user {recipient_id} has no push token")
+        return {"sent": False, "reachable": False, "reason": "missing_token"}
+
+    display_name = sender_name.strip() if sender_name else "A friend"
+    body = f"{display_name} could use some warmth right now."
+    success = send_push(
+        token,
+        "Friendly",
+        body,
+        data={
+            "type": "support_beacon",
+            "friend_id": sender_id,
+            "beacon_user_id": sender_id,
+            "sender_name": display_name,
+        },
+    )
+
+    if not success:
+        return {"sent": False, "reachable": True, "reason": "send_failed"}
+
+    try:
+        repo.create_nudge_log(recipient_id, "support_beacon", body, sender_id)
+    except Exception as e:
+        logger.warning(f"Beacon alert sent but log failed: {e}")
+
+    return {"sent": True, "reachable": True, "reason": "sent"}
