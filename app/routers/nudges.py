@@ -103,6 +103,24 @@ def _compute_nudge_tier(days_since_activity: int) -> Optional[str]:
     return None
 
 
+def _compute_effective_nudge_tier(
+    days_since_activity: int,
+    suggested_friend: Optional[FriendSuggestion],
+) -> Optional[str]:
+    """
+    Reminder nudges are friend-drift nudges first.
+
+    A user can be generally active while one friendship has gone quiet. In that
+    case, use the suggested friend's gap instead of suppressing the nudge just
+    because the user recently checked in or contacted someone else.
+    """
+    if suggested_friend is not None:
+        friend_tier = _compute_nudge_tier(suggested_friend.days_since_contact)
+        if friend_tier is not None:
+            return friend_tier
+    return _compute_nudge_tier(days_since_activity)
+
+
 def _pick_copy(tier: str, friend_name: Optional[str] = None) -> str:
     import random
     variants = NUDGE_COPY.get(tier, NUDGE_COPY["gentle_observation"])
@@ -220,7 +238,7 @@ def get_warmth(
             )
 
     tier = _compute_warmth_tier(week_streak, had_activity_this_week)
-    nudge_tier = _compute_nudge_tier(days_since)
+    nudge_tier = _compute_effective_nudge_tier(days_since, suggested)
 
     return WarmthSnapshot(
         warmth_tier=tier,
@@ -252,10 +270,21 @@ def check_nudge_eligibility(
 
     friend_name = warmth.suggested_friend.friend_name if warmth.suggested_friend else None
     copy = _pick_copy(warmth.nudge_tier, friend_name)
+    if warmth.suggested_friend:
+        reason = (
+            f"{warmth.suggested_friend.friend_name} has drifted for "
+            f"{warmth.suggested_friend.days_since_contact} days — "
+            f"{warmth.nudge_tier} tier"
+        )
+    else:
+        reason = (
+            f"User absent for {warmth.days_since_outreach} days — "
+            f"{warmth.nudge_tier} tier"
+        )
 
     return NudgeEligibility(
         eligible=True,
-        reason=f"User absent for {warmth.days_since_outreach} days — {warmth.nudge_tier} tier",
+        reason=reason,
         nudge_tier=warmth.nudge_tier,
         copy=copy,
         friend_name=friend_name,

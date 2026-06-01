@@ -23,10 +23,18 @@ def _get_firebase():
     try:
         import firebase_admin
         from firebase_admin import credentials
+        import json
         import os
 
+        cred_json = (
+            os.environ.get("FIREBASE_SERVICE_ACCOUNT_JSON")
+            or os.environ.get("GOOGLE_APPLICATION_CREDENTIALS_JSON")
+        )
         cred_path = os.environ.get("GOOGLE_APPLICATION_CREDENTIALS")
-        if cred_path:
+        if cred_json:
+            cred = credentials.Certificate(json.loads(cred_json))
+            _firebase_app = firebase_admin.initialize_app(cred)
+        elif cred_path:
             cred = credentials.Certificate(cred_path)
             _firebase_app = firebase_admin.initialize_app(cred)
         else:
