@@ -14,7 +14,7 @@ from contextlib import asynccontextmanager
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import get_settings
-from app.routers import admin, ambient, auth, check_ins, friendships, interactions, profiles, tester
+from app.routers import admin, ambient, auth, check_ins, feedback, friendships, interactions, profiles, tester
 from app.routers.debug_token import router as debug_router
 from app.routers import nudges
 from app.routers import signals
@@ -71,6 +71,7 @@ app.include_router(friendships.router)
 app.include_router(interactions.router)
 app.include_router(ambient.router)
 app.include_router(check_ins.router)
+app.include_router(feedback.router)
 app.include_router(nudges.router)
 app.include_router(signals.router)
 app.include_router(friend_notes.router)

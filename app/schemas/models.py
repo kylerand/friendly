@@ -278,3 +278,17 @@ class TesterReportStatusUpdate(BaseModel):
 class GitHubIssueResponse(BaseModel):
     url: str
     number: int
+
+
+class FeedbackCreate(BaseModel):
+    type: str = "feedback"
+    title: Optional[str] = None
+    description: Optional[str] = None
+    source: Optional[str] = None
+    message: Optional[str] = None
+    stack_trace: Optional[str] = None
+    severity: str = "medium"
+    screenshots: List[str] = Field(default_factory=list)
+    device: Optional[str] = None
+    app_version: Optional[str] = None
+    contact: Optional[str] = None
